@@ -15,31 +15,26 @@ body {
 <script src='../d3.js'></script>
 <script src='../mytooltip.js'></script>
 <script>
-	var layers1, 
-		layers0,
+	var layers,
 		mydata = null,
 		tooltip = null,
 		streamgraph = null;
 	function draw() {
+		"use strict";
 		var countOfLayers = 30, // number of layers
 		    countOfXTicks = 200, // number of samples per layer
-		    stack,
-		    layerRange1,
-		    mappedRange1;
-			stack = d3.layout.stack()
+		    layerRange = d3.range(countOfLayers),
+		    layerValues = layerRange.map(function() { return bumpLayer(countOfXTicks); }),
+			layout = d3.layout.stack()
 	    		.offset('wiggle');		
-			layerRange1 = d3.range(countOfLayers);
-			mappedRange1 = layerRange1.map(function() { return bumpLayer(countOfXTicks); });
 
-		layers1 = stack(mappedRange1);
+		layers = layout(layerValues);
 		
-		//loop through layers0 putting back the layer labels
-		var mybigdata = layers1.map(function(d, i) {
+		//loop through layers adding layer labels
+		mydata = layers.map(function(d, i) {
 			var obj = { "label": 'layer ' + i.toString(), "values":d}
 			return obj;
 		})
-		mydata = mybigdata;
-		layers0 = layers1;
 		
 		var width = 960,
 		    height = 200;
@@ -49,7 +44,6 @@ body {
 		    .range([0, width]);
 		
 		var y = d3.scale.linear()
-		    //.domain([0, d3.max(layers0.concat(layers1), function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
 		    .domain([0, 
 		             d3.max(
 		            	mydata,    			//[{type:apples, values:[{x:,y:},{x:,y:}]}]
@@ -61,7 +55,7 @@ body {
 		    			})])
 		    .range([height, 0]);
 		
-		var color = d3.scale.linear()
+		var color_scale = d3.scale.linear()
 		    .range(["#aad", "#556"]);
 		
 		var area = d3.svg.area()
@@ -90,13 +84,13 @@ body {
 		
 		
 		streamgraph = svg.selectAll("path")
-		    .data(layers0);
+		    .data(layers);
 
 		streamgraph
 		    //.data(mydata)
 		    .enter().append("path") 
 		    .attr("d", area)
-		    .style("fill", function() { return color(Math.random()); })
+		    .style("fill", function() { return color_scale(Math.random()); })
 		    .on("mouseover", mouseover())
 		    .on("mouseout", mouseout())
 	    	
@@ -114,6 +108,7 @@ body {
         	if (tooltip) {
         		tooltip.Show(d3.event, 'label: ' + name);
         	}	
+        	//fade all other layers to highlight this one
         	streamgraph
         		.filter(
         			function(h,j){
@@ -128,6 +123,7 @@ body {
         	if (tooltip) {
         		tooltip.Hide(d3.event);
         	}
+        	//unfade all the other layers
         	streamgraph
         		.filter(
         			function(h,j){
