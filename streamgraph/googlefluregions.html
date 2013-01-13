@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset='utf-8'>
-<title>Google Flu Months</title>
+<title>Google Flu Regions</title>
 <head>
 <style>
 
@@ -28,7 +28,7 @@
 <script src='../d3.js'></script>
 <script src='../mytooltip.js'></script>
 <script>
-	//sg is the data required for the streamgraph, it contains the x,y and y0
+	//sgData is the data required for the streamgraph, it contains the x,y and y0
 	//  values for each layer - it needs to be accessible to mouseover if we
 	//  want to show the y values in the tooltip. 
 	var sgData = null,   
@@ -167,17 +167,11 @@
 	    	
 	}//end draw
 	
+	//on mousemove, we draw a line to show where in the xaxis
 	function mousemove() {
 		return function(g, i) {
-        	var mouse = d3.mouse(this);
-        	var date = x_scale.invert(mouse[0]);
-        	var format = d3.time.format("%Y-%m-%d")
-        	var dateString = format(date);
-        	var iDate = dates.indexOf(dateString);
-        	if (iDate == -1)
-        		iDate = d3.bisectLeft(dates, dateString);
-        	if (iDate >= dates.length)
-        		iDate = dates.length - 1;
+			var iDate = dateFromPos(d3.mouse(this));
+			var dateString = dates[iDate];
         	date = parseDate(dates[iDate]);
         	var onscale = x_scale(date);
         	/* add tooltip with the date and the total value 
@@ -189,27 +183,29 @@
         	line.setAttribute('x2', onscale);			
 		}
 	}
+	
+	//given a mouse position, find the index of the date
+	// for which we have data
+	function dateFromPos(mouse) {
+    	var date = x_scale.invert(mouse[0]);
+    	var format = d3.time.format("%Y-%m-%d")
+    	var dateString = format(date);
+    	var iDate = dates.indexOf(dateString);
+    	if (iDate == -1)
+    		iDate = d3.bisectLeft(dates, dateString);
+    	if (iDate >= dates.length)
+    		iDate = dates.length - 1;
+    	date = parseDate(dates[iDate]);
+    	var onscale = x_scale(date);
+    	return iDate;
+	}
+	
 	function mouseover() {
         return function(g, i) {
-        	var mouse = d3.mouse(this);
-        	var date = x_scale.invert(mouse[0]);
-        	var format = d3.time.format("%Y-%m-%d")
-        	var dateString = format(date);
-        	var iDate = dates.indexOf(dateString);
-        	if (iDate == -1)
-        		iDate = d3.bisectLeft(dates, dateString);
-        	if (iDate >= dates.length)
-        		iDate = dates.length - 1;
-        	date = parseDate(dates[iDate]);
-        	var onscale = x_scale(date);
-        	/*
-        	var line = document.getElementById("xline");
-        	line.setAttribute("x1", onscale);
-        	line.setAttribute('x2', onscale);*/
-        	
+        	var iDate = dateFromPos(d3.mouse(this));
+        	var dateString = dates[iDate];
         	var name = terms[i]; //sgData[i].label;
         	var layerData = sgData[i][iDate];  
-        	//layerData.filter(function(d) { d.})
         	//add the lines below to see the first values 
         	//   in the tooltip
         	//var valuesToShow = sgData[i].filter(function(d,i){return i < 6;})
@@ -240,14 +236,8 @@
 		var ttd = 
 		'<div id="tooltip"' +
 		'	style = "' +
-		'	background-color: lightgray;' + 
-		'	width: 100px;' +
-		'	height: 10em;' +
-		'	text-align: left;' +
-		'	opacity: 0.7;' +
-		'	border-radius: 5px;' +
-		'	display: none;' + 
-		'	padding-left: 1em;">' + 
+		'	background-color: lightgray; width: 100px; height: 10em; text-align: left;' +
+		'	opacity: 0.7; border-radius: 5px; display: none; padding-left: 1em;">' + 
 		'	</div>';
 		return ttd;
 	}
