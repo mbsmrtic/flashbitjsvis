@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<title>Google Flu Months</title>
+<head>
+<style>
+
+	body {
+	  font: 10px sans-serif;
+	  position: relative;
+	  width: 700px;
+	  background: black;
+	}
+    .axis path{
+        fill:none;
+        stroke: white;
+    }
+    .axis {
+        font-size:8pt;
+        font-family:sans-serif;
+        stroke: white;
+    }
+    .tick {
+        fill:none;
+        stroke: white;
+    }
+
+</style>
+<script src='../d3.js'></script>
+<script src='../mytooltip.js'></script>
+<script>
+	//sg is the data required for the streamgraph, it contains the x,y and y0
+	//  values for each layer - it needs to be accessible to mouseover if we
+	//  want to show the y values in the tooltip. 
+	var sgData = null,   
+		tooltip = null,
+    	x_scale = null,
+		streamgraph = null,
+		width = 700,
+		height = 600,
+		margin = 20,
+		parseDate = null,
+		dates = [],
+	//terms is an array of all the unique layer labels in the dataset
+		terms = [];
+	
+	function draw(data) {
+		"use strict";
+		var layers = null;
+		//parseDate defines how the dataset has it's dates stored
+		// in this case it's 11\20\2012 for different date formats, change this
+		parseDate = d3.time.format("%Y-%m-%d").parse;
+		
+		//populate arrays - unique layer labels and unique x values
+		var getXAxisValues = function(row) {
+			return row.Date;
+		}
+		
+		//get unique terms and date strings
+		//  in this visualization, a term is a layer
+		//  and a date is an x tick
+		terms = ["HHS Region 1 (CT, ME, MA, NH, RI, VT)","HHS Region 2 (NJ, NY)"];
+		terms.push("HHS Region 3 (DE, DC, MD, PA, VA, WV)","HHS Region 4 (AL, FL, GA, KY, MS, NC, SC, TN)");
+		terms.push("HHS Region 5 (IL, IN, MI, MN, OH, WI)","HHS Region 6 (AR, LA, NM, OK, TX)");
+		terms.push("HHS Region 7 (IA, KS, MO, NE)","HHS Region 8 (CO, MT, ND, SD, UT, WY)");
+		terms.push("HHS Region 9 (AZ, CA, HI, NV)","HHS Region 10 (AK, ID, OR, WA)");
+		dates = data.map(getXAxisValues);
+		dates.sort();
+		var countOfLayers = terms.length;
+		var countOfXTicks = dates.length;
+		
+		//convert the data from values to xy values
+		var getLayerXYs = function(layerLabel) {
+			//row = { date:,UnitedStates:33, Alabama:44, Alaska: 33...}
+			//layerLabel = Alabama
+			
+			//var layerRows = data.filter(function(row){
+			//	return row.layer == layerLabel;
+			//	});
+			//initialize the layer data - for stack it needs to be fully populated
+			var layerXYs = dates.map(function(dateString, iDate) {
+				return {"x":iDate, "y":0}
+			})
+			data.forEach(function(row){
+				var iDate = dates.indexOf(row.Date);
+				var layerXY = layerXYs[iDate];
+				layerXY.y = Number(row[layerLabel]);
+				//return {"x":iDate, "y":Number(row.y)};
+			})
+			return layerXYs;
+		}
+		sgData = terms.map(getLayerXYs);
+
+		//add the x axis - the dates
+		var x_extent = d3.extent(dates, parseDate);
+		x_scale = d3.time.scale()
+			.range([margin, width - margin])
+			.domain(x_extent);
+		var x_axis = 
+			d3.svg.axis()
+				.scale(x_scale)
+				.orient("bottom");
+		var xScale = d3.scale.linear()
+		    .domain([0, countOfXTicks - 1])
+		    .range([0, width]);
+		
+		//send sgData into the stack/wiggle calculation - it creates 
+		//  the additional data needed for the layout of the graph
+		layers = d3.layout.stack().offset('wiggle')(sgData);
+		
+		//create the yScale
+		var fn1 = function(d) {	return d.y0 + d.y;}
+		var fn2 = function(layer) {	return d3.max(layer, fn1);	}
+		var max_y_value = d3.max(sgData, fn2);
+		var yScale = d3.scale.linear()
+		    .domain([0, max_y_value])
+		    .range([height - margin, 0]);
+		
+		//Define what color range we'll use
+		//  #aad to #556 are rgb values that are a range
+		//  of blues
+		var color = d3.scale.linear()
+		    .range(["#aad", "#556"]);
+		
+		//draw the streamgraph visualization
+		var area = d3.svg.area()
+		    .x(function(d) { 
+		    	var date = parseDate(dates[d.x]);
+		    	var onscale = x_scale(date);
+		    	return onscale; 
+		    	})
+		    .y0(function(d, i) { 
+		    	return yScale(d.y0); 
+		    	})
+		    .y1(function(d) { 
+		    	return yScale(d.y0 + d.y); 
+		    	});
+		
+		var svg = d3.select("body").append("svg")
+		    .attr("width", width)
+		    .attr("height", height)
+		    .on("mousemove", mousemove());
+		
+		d3.select('svg')
+		.append('line')
+			.attr('id', 'xline')
+			.attr('x1', 50)
+			.attr('y1', 0)
+			.attr('x2', 50)
+			.attr('y2', height - margin)
+			.style('stroke', 'rgb(255,255,255)')
+			.style('stroke-width', 2)
+
+		streamgraph = svg.selectAll("path")
+		    .data(layers)
+		    .enter().append("path") 
+		    .attr("d", area)
+		    .style("fill", function() { return color(Math.random()); })
+		    .on("mouseover", mouseover())
+		    .on("mouseout", mouseout())
+		   
+		d3.select('svg')
+			.append('g')
+				.attr('class', 'x axis')
+				.attr('transform', 'translate(0,' + (height - margin) + ')')
+			.call(x_axis);
+				
+	    	
+	}//end draw
+	
+	function mousemove() {
+		return function(g, i) {
+        	var mouse = d3.mouse(this);
+        	var date = x_scale.invert(mouse[0]);
+        	var format = d3.time.format("%Y-%m-%d")
+        	var dateString = format(date);
+        	var iDate = dates.indexOf(dateString);
+        	if (iDate == -1)
+        		iDate = d3.bisectLeft(dates, dateString);
+        	if (iDate >= dates.length)
+        		iDate = dates.length - 1;
+        	date = parseDate(dates[iDate]);
+        	var onscale = x_scale(date);
+        	/* add tooltip with the date and the total value 
+        	var name = "United States";
+        	var layerData = 
+        		*/
+        	var line = document.getElementById("xline");
+        	line.setAttribute("x1", onscale);
+        	line.setAttribute('x2', onscale);			
+		}
+	}
+	function mouseover() {
+        return function(g, i) {
+        	var mouse = d3.mouse(this);
+        	var date = x_scale.invert(mouse[0]);
+        	var format = d3.time.format("%Y-%m-%d")
+        	var dateString = format(date);
+        	var iDate = dates.indexOf(dateString);
+        	if (iDate == -1)
+        		iDate = d3.bisectLeft(dates, dateString);
+        	if (iDate >= dates.length)
+        		iDate = dates.length - 1;
+        	date = parseDate(dates[iDate]);
+        	var onscale = x_scale(date);
+        	/*
+        	var line = document.getElementById("xline");
+        	line.setAttribute("x1", onscale);
+        	line.setAttribute('x2', onscale);*/
+        	
+        	var name = terms[i]; //sgData[i].label;
+        	var layerData = sgData[i][iDate];  
+        	//layerData.filter(function(d) { d.})
+        	//add the lines below to see the first values 
+        	//   in the tooltip
+        	//var valuesToShow = sgData[i].filter(function(d,i){return i < 6;})
+        	//var yvalues = valuesToShow.map(function(d) { return '<br>' + d.y;})
+        	//name += " " + yvalues;
+        	if (tooltip) 
+        		tooltip.Show(d3.event, name + "<br> date: " + dateString + "<br>count: " + layerData.y);
+        	streamgraph
+        		.filter(function(h,j){return j != i;})
+        		.style("opacity", .6);
+        }
+	}
+	
+    function mouseout() {
+        return function(g, i) {
+        	//hide tooltip
+        	if (tooltip) 
+        		tooltip.Hide(d3.event);
+        	//reset the opacity of all the layers
+        	streamgraph
+        		.filter(function(h,j){return j != i;})
+        		.style("opacity", 1);
+        }
+    }
+
+	//the div for the tooltip
+  	function tooltipDivString() {
+		var ttd = 
+		'<div id="tooltip"' +
+		'	style = "' +
+		'	background-color: lightgray;' + 
+		'	width: 100px;' +
+		'	height: 10em;' +
+		'	text-align: left;' +
+		'	opacity: 0.7;' +
+		'	border-radius: 5px;' +
+		'	display: none;' + 
+		'	padding-left: 1em;">' + 
+		'	</div>';
+		return ttd;
+	}
+	
+	//a test to see if the browser supports this functionality
+	//  if it's unsupported, an error will be thrown here
+	function maptest() {
+		var arrayIn = [ 2, 4, 6];
+		var arrayOut = arrayIn.map(function(d) { return d + 2; });
+	}
+	
+	//add 
+	function addToolTipDiv() {
+		if (! tooltip) {
+			var ttdString = tooltipDivString();
+			document.write(ttdString);
+			tooltip = new MyToolTip("tooltip", false);
+		}
+	}
+	
+
+</script>
+</head>
+<body>
+	<script>
+		try {
+			//ensure that the browser supports functionality needed for the visualization
+			maptest();
+			//add a div for the tooltip
+			addToolTipDiv();
+			//draw the visualization
+			d3.csv('../data/googleflu.csv', draw);
+		}
+		catch (err) {
+			//put up a static image
+			document.write('<p align=left><img src="streamgraph.jpg" width="700" height="200" /></p>');
+			console.log("error: " + err);
+		}
+	</script>
+</body>
