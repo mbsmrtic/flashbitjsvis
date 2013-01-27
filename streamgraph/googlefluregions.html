@@ -123,6 +123,7 @@
 		
 		//draw the streamgraph visualization
 		var area = d3.svg.area()
+			.interpolate("basis")
 		    .x(function(d) { 
 		    	var date = parseDate(dates[d.x]);
 		    	var onscale = x_scale(date);
@@ -138,7 +139,8 @@
 		var svg = d3.select("body").append("svg")
 		    .attr("width", width)
 		    .attr("height", height)
-		    .on("mousemove", mousemove());
+		    .on("mousemove", bodymousemove())
+		    ;
 		
 		d3.select('svg')
 		.append('line')
@@ -168,16 +170,24 @@
 	}//end draw
 	
 	//on mousemove, we draw a line to show where in the xaxis
-	function mousemove() {
+	function bodymousemove() {
 		return function(g, i) {
 			var iDate = dateFromPos(d3.mouse(this));
-			var dateString = dates[iDate];
-        	date = parseDate(dates[iDate]);
-        	var onscale = x_scale(date);
-        	// add tooltip with the date and the total value 
         	var line = document.getElementById("xline");
-        	line.setAttribute("x1", onscale);
-        	line.setAttribute('x2', onscale);			
+			if (iDate == -1) {
+				line.style.display='none';
+			}
+			else {
+				line.style.display='block';
+				var dateString = dates[iDate];
+	        	date = parseDate(dates[iDate]);
+	        	var onscale = x_scale(date);
+	        	// add tooltip with the date and the total value 
+				//if (tooltip) 
+				//	tooltip.Show(d3.event,dateString );
+	        	line.setAttribute("x1", onscale);
+	        	line.setAttribute('x2', onscale);							
+			}
 		}
 	}
 	

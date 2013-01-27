@@ -27,6 +27,7 @@ function MyToolTip(id) {
 	   if(div.style.overflow!="hidden")div.style.overflow="hidden";
 	   if(div.style.display!="none")div.style.display="none";
 	   if(div.style.position!="absolute")div.style.position="absolute";
+	   if(div.style.color!="black")div.style.color="black";
 	        
 	   isInit++; 
   	}
