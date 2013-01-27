@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Entity Year Bubble Plot</title>
+<head>
+<style>
+
+	body {
+	  font: 12px sans-serif;
+	  background: black;
+	  stroke: white;
+	}
+	
+	.axis path,
+	.axis line {
+	  fill: none;
+	  stroke: white;
+	  shape-rendering: crispEdges;
+	}
+	
+	.line {
+	  fill: none;
+	  stroke: white;
+	  stroke-width: 1.5px;
+	}
+
+</style>
+<script src="../scripts/d3.js"></script>
+<script src='../scripts/mytooltip.js'></script>
+<script src='entitybubble.js'></script>
+</head>
+<body>
+	<script>
+		try {
+			//ensure that the browser supports functionality needed for the visualization
+			maptest();
+			//draw the visualization
+			d3.csv(dataFile, draw);
+			//add the tooltip 
+			if (! tooltip) 
+				tooltip = new MyToolTip("tooltip");		
+		}
+		catch (err) {
+			//put up a static image
+			//document.write('<p align=left><img src="../googleflu.jpg" width="700" height="200" /></p>');
+			//console.log("error: " + err);
+			document.write("<p align=left style='color:blue'>here</p>");
+			
+		}
+	</script>
+</body>
