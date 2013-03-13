@@ -16,7 +16,7 @@ function MyToolTip(id) {
   		document.write(
   			'<div id="' + id + '"' +
   			'	style = "' +
-  			'	background-color: lightgray; width: 100px; height: 3em; text-align: left;' +
+  			'	background-color: lightgray; width: 100px; height: 4em; text-align: left;' +
   			'	font: 10px sans-serif;' +
   			'	opacity: 0.7; border-radius: 5px; display: none; padding-left: 1em;">' + 
   			'	</div>');

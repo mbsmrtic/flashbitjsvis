@@ -31,8 +31,6 @@ var
 function draw(data) {
 	"use strict";
 
-	//colors of the lines in the linegraph
-	//var color = d3.scale.category20b();
 	var color = d3.scale.linear().domain([0,100]).range(['cyan','rgb(34,94,168)']);
 	
 	//add body svg
@@ -84,7 +82,7 @@ function draw(data) {
 	    .attr("transform", "translate(0," + height + ")")
 	    .call(xAxis);
 		
-	//add y axis, y axis is linear
+	//add y axis
 	yscale = d3.scale.ordinal()
 	  	.rangeRoundBands([height, 0], 1);
 	var yAxis = d3.svg.axis()
@@ -248,7 +246,8 @@ function draw(data) {
 			if (tooltip)
 				tooltip.Show(d3.event, 
 						g[yAxisFieldName] + ' ' + 
-						xAxisFormat(g[xAxisFieldName]) + '<br>Count: ' + g[labelFieldName]);
+						xAxisFormat(g[xAxisFieldName]) + '<br>Count: ' + g[labelFieldName] 
+						);
 			graph
 				.filter(function(h,j){ 
 					return j != i; 
