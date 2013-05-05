@@ -146,12 +146,13 @@ svg {
 
 .axis line, .axis path {
   fill: none;
-  stroke: #000;
+  stroke: white;
   shape-rendering: crispEdges;
 }
 
 .axis text {
   text-shadow: 0 1px 0 #fff;
   cursor: move;
+  stroke: white;
 }
 

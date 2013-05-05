@@ -1,9 +1,19 @@
-
 <!DOCTYPE html>
 <html>
+	<meta charset="utf-8">
+	<title>China Study Parallel Coordinates</title>
   <head>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
     <link type="text/css" rel="stylesheet" href="chparallel.css"/>
+	<style>
+	
+	body {
+	  font: 10px sans-serif;
+	  position: relative;
+	  width: 960px;
+	  background-color: black;	
+	}
+	
+	</style>
   </head>
   <body>
     <script type="text/javascript" src="../scripts/d3.js"></script>
@@ -81,8 +91,39 @@ d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {
       .attr("class", "measure")
       .attr("transform", function(d) { return "translate(" + xScale(d) + ")"; })
       .call(d3.behavior.drag()
-      	.origin(function(d) { return {x: xScale(d)}; })
+		.origin(function(d) { 
+			return {
+	      		x: xScale(d)
+	    	}; 
+	    })
+		.on('dragstart', dragstart)
+		.on('drag', drag)
+		.on('dragend', dragend)
 		);
+  
+  function dragstart(d) {
+	  iDragCol = axisCols.indexOf(d);
+  }
+  
+  function drag(d) {
+	  xScale.range()[iDragCol] = d3.event.x;
+	  axisCols.sort(function(a,b) { 
+		  return xScale(a) - xScale(b);
+		  })
+	    g.attr("transform", function(d) { 
+	    	return "translate(" + xScale(d) + ")"; });
+	    dataLinesSelection.attr("d", path);	  
+  }
+  
+  function dragend(d){
+	  xScale.domain(axisCols).rangePoints([margin, width - (margin * 2)]);
+	  var t = d3.transition().duration(500);
+	  t.selectAll(".measure").attr("transform", function(d) {
+		  return 'translate(' + xScale(d) + ')';
+	  })
+	  t.selectAll('.dataLines path').attr('d', path);
+  }
+  
   // draw the axes
   g.append("svg:g")
       .attr("class", "axis")
@@ -157,7 +198,7 @@ function mouseover() {
 		tooltiptext = d.CountyName + '<br>'+ d.Year;
 		//make it black and not faded, saving color and fade status
 		saveColor = this.style.stroke;
-		this.style.stroke = 'black';
+		this.style.stroke = 'white';
 		this.style.strokeWidth = 5;
 		faded = this.classList.contains('fade');
 		this.classList.remove('fade');
