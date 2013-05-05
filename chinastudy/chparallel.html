@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <link type="text/css" rel="stylesheet" href="chparallel.css"/>
+  </head>
+  <body>
+    <script type="text/javascript" src="../scripts/d3.js"></script>
+	<script src='../scripts/mytooltip.js'></script>
+    <script type="text/javascript">
+
+var colors = {'1983': '#66C2A5', '1989': '#8DA0CB' }
+var axisCols = ['Year', 'KCAL', 'dBMI', 'TOTCHOL', 'NONHDL', 'MEAT', 'EGGS', 'FISH', 'WHTFLOUR', 
+                'FRUIT', 'GREENVEG', 'LEGUME', 'LIGHTVEG', 'OTHCEREAL', 'RICE', 'SALTVEG', 
+                'STCHSUGAR', 'STCHTUBER', 
+                'COLRECCAc', 
+                'BREASTCAc', 'LEUKEMIAb', 'IHDc','DIABETESc'];
+var tooltip = null;
+    
+var margin = 60,
+	width = window.innerWidth - margin,
+	height = window.innerHeight - (margin * 2);
+
+var xScale = d3.scale.ordinal().domain(axisCols).rangePoints([margin, width - (margin * 2)]),
+    yScales = {};
+
+var dataLinesSelection;
+
+var svg = 
+	d3.select("body").append("svg:svg")
+      .attr("width", 	width + margin + margin)
+      .attr("height", height + margin + margin) 
+      .on("mousemove", mousemove())
+  	.append("svg:g")
+      .attr("transform", "translate(" + margin + ',' + margin + ')'); 
+    
+var countyData = [];   //the data we'll use in our visualization
+
+d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {   
+	//creating the data structure that we'll use
+	// todo - get rid of dataIn when we're done with it
+	dataIn.forEach(function(d, i) {
+		countyData[i] = {CountyName: d['CountyName'], Year:d['Year']};
+	});
+  	// Create a scale and brush for each measure.
+ 	axisCols.forEach(function(d) {
+    	// Coerce values to numbers.
+    	dataIn.forEach(function(p, i) { 
+   			countyData[i][d] = +p[d]; 
+    	});
+
+    	yScales[d] = d3.scale.linear()
+        	.domain(d3.extent(countyData, function(p) { 
+        		return p[d]; 
+        		}))
+        	.range([height, 0]);
+
+    	yScales[d].brush = d3.svg.brush()
+        	.y(yScales[d])
+        	.on("brush", brush);
+ 	});
+
+  // Add data lines.
+  dataLinesSelection = svg.append("svg:g")
+      .attr("class", "dataLines")
+    .selectAll("path")
+      .data(countyData)
+    .enter().append("svg:path")
+      .attr("d", path)
+      .style('stroke', 
+    	function(d) { return colors[d.Year]; })  //we're currently coloring by year
+	  .on('mouseover', mouseover())
+	  .on('mouseout', mouseout())
+	  ;
+
+  // Add a group element for each measure.
+  var g = svg.selectAll(".measure")
+      .data(axisCols)
+    .enter().append("svg:g")
+      .attr("class", "measure")
+      .attr("transform", function(d) { return "translate(" + xScale(d) + ")"; })
+      .call(d3.behavior.drag()
+      	.origin(function(d) { return {x: xScale(d)}; })
+		);
+  // draw the axes
+  g.append("svg:g")
+      .attr("class", "axis")
+      .each(function(d) { 
+    	  d3.select(this).call(
+    			  d3.svg.axis().orient("left")
+    			  	.scale(
+    				  yScales[d]
+    				  )); })
+    //draw the axis titles
+     .append("svg:text")
+      	.attr("text-anchor", "left")
+      	.attr('transform', 'rotate(-45)')
+      	.attr("y", -15)
+      	.text(String);
+
+  // Add a brush for each axis.
+  g.append("svg:g")
+      .attr("class", "brush")
+      .each(function(d) { d3.select(this).call(
+    		  yScales[d].brush); 
+      })
+      .selectAll("rect")
+      	.attr("x", -8)
+      	.attr("width", 16);
+});   //end of d3.csv handler
+
+
+// Returns the path for a given data point.
+function path(d) {
+	fn = function(measure) {
+		var xPos = xScale(measure);
+		var yScale = yScales[measure];
+		var yValue = d[measure];
+		var yPos = yScale(yValue);
+		var retValue = [xPos, yPos];
+		return retValue;
+	}
+	var datapts = axisCols.map(fn);
+	var line = d3.svg.line().interpolate('monotone');
+	var retPath = line(datapts);//.interpolate('cardinal');
+	return retPath;
+}
+
+// Handles a brush event, toggling the display of data lines.
+function brush() {
+  var actives = axisCols.filter(function(p) { return !yScales[p].brush.empty(); }),
+      extents = actives.map(function(p) { return yScales[p].brush.extent(); });
+  dataLinesSelection.classed("fade", function(d) {
+    return !actives.every(function(p, i) {
+      return extents[i][0] <= d[p] && d[p] <= extents[i][1];
+    });
+  });
+}
+
+if (! tooltip) {
+	tooltip = new MyToolTip('tooltip');
+}
+var tooltiptext = '';
+
+function mousemove() {
+	return function(d, i) {
+		if ((tooltiptext.length > 0) && (tooltip)) {
+			tooltip.Show(d3.event, tooltiptext, 160,100);//d.CountyName);
+		}		
+	}	
+}
+var saveColor = null;
+var faded = false;
+function mouseover() {
+	return function(d, i) {
+		tooltiptext = d.CountyName + '<br>'+ d.Year;
+		//make it black and not faded, saving color and fade status
+		saveColor = this.style.stroke;
+		this.style.stroke = 'black';
+		this.style.strokeWidth = 5;
+		faded = this.classList.contains('fade');
+		this.classList.remove('fade');
+		//move it to the front
+		this.parentNode.appendChild(this);
+	}
+}
+
+function mouseout() {
+	return function(d, i) {
+		//restore strokewidth, color and fade status
+		if (faded) this.classList.add('fade');
+		this.style.stroke = saveColor;
+		this.style.strokeWidth = '';
+		//remove tooltip
+		tooltiptext = '';
+		if (tooltip)
+			tooltip.Hide(d3.event);
+	}
+}
+
+    </script>
+  </body>
+</html>

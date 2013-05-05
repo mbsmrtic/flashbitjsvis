@@ -1,5 +1,5 @@
 /**
- *  MyToolTip provides a tooltip. The code was originally from http://ashishware.com/js/Tooltip.js 
+ *  MyToolTip provides a tooltip.. The code was originally from http://ashishware.com/js/Tooltip.js 
  *  I modified it, changing the code style and removing functionality that I don't need. 
  *  Here is the original notice from that site: 
 // Free for any type of use so long as original notice remains unchanged.
@@ -16,7 +16,7 @@ function MyToolTip(id) {
   		document.write(
   			'<div id="' + id + '"' +
   			'	style = "' +
-  			'	background-color: lightgray; width: 100px; height: 4em; text-align: left;' +
+  			'	background-color: lightgray; width: 150px; height: 70px; text-align: left;' +
   			'	font: 10px sans-serif;' +
   			'	opacity: 0.7; border-radius: 5px; display: none; padding-left: 1em;">' + 
   			'	</div>');
@@ -38,7 +38,7 @@ function MyToolTip(id) {
 	   isInit++; 
   	}
   	
-	this.Show = function(e,strHTML) {
+	this.Show = function(e,strHTML,shiftLeftAmount, shiftUpAmount) {
 		if(isInit<0) return;
 	    
 	    var newPosx,newPosy,height,width;
@@ -75,6 +75,11 @@ function MyToolTip(id) {
 	   		newPosy= newPosy+ document.body.scrollTop;
 	     	newPosx = newPosx + document.body.scrollLeft;
 	   	}
+		
+		if (shiftLeftAmount)
+			newPosx -= shiftLeftAmount;
+		if (shiftUpAmount)
+			newPosy -= shiftUpAmount;
 	
 	   	div.style.display='block';
 	   	div.style.top= newPosy + "px";
@@ -82,7 +87,7 @@ function MyToolTip(id) {
 	
 	   	div.focus();
 	}; 
-
+	
 	this.Hide= function(e) {
     	div.style.display='none';
    	};
