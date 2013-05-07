@@ -26,6 +26,32 @@ var axisCols = ['Year', 'KCAL', 'dBMI', 'TOTCHOL', 'NONHDL', 'MEAT', 'EGGS', 'FI
                 'STCHSUGAR', 'STCHTUBER', 
                 'COLRECCAc', 
                 'BREASTCAc', 'LEUKEMIAb', 'IHDc','DIABETESc'];
+var colCategory = {
+		'Year': 	'Year',
+		'KCAL': 	'KCAL',
+		'dBMI': 	'dBMI',
+		'TOTCHOL': 	'chol', 
+		'NONHDL': 	'chol', 
+		'MEAT': 	'food', 
+		'EGGS': 	'food', 
+		'FISH': 	'food', 
+		'WHTFLOUR': 'food', 
+        'FRUIT': 	'food', 
+        'GREENVEG': 'food', 
+        'LEGUME': 	'food', 
+        'LIGHTVEG': 'food', 
+        'OTHCEREAL':'food', 
+        'RICE':		'food', 
+        'SALTVEG':	'food', 
+        'STCHSUGAR':'food', 
+        'STCHTUBER':'food', 
+        'COLRECCAc':'mort', 
+        'BREASTCAc':'mort', 
+        'LEUKEMIAb':'mort', 
+        'IHDc':		'mort',
+        'DIABETESc':'mort'
+        };		
+
 var tooltip = null;
     
 var margin = 60,
@@ -54,20 +80,26 @@ d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {
 		countyData[i] = {CountyName: d['CountyName'], Year:d['Year']};
 	});
   	// Create a scale and brush for each measure.
- 	axisCols.forEach(function(d) {
+ 	axisCols.forEach(function(colName) {
     	// Coerce values to numbers.
     	dataIn.forEach(function(p, i) { 
-   			countyData[i][d] = +p[d]; 
+   			countyData[i][colName] = +p[colName]; 
     	});
 
-    	yScales[d] = d3.scale.linear()
-        	.domain(d3.extent(countyData, function(p) { 
-        		return p[d]; 
-        		}))
+    	colExtent = d3.extent(countyData, function(p) {
+    		return p[colName];
+    	});
+    	if (colCategory[colName] == 'food')
+    		colExtent = [0, 1100];
+    	else if (colCategory[colName] == 'mort') {
+			colExtent = [0, 200];
+		}
+    	yScales[colName] = d3.scale.linear()
+        	.domain(colExtent)
         	.range([height, 0]);
 
-    	yScales[d].brush = d3.svg.brush()
-        	.y(yScales[d])
+    	yScales[colName].brush = d3.svg.brush()
+        	.y(yScales[colName])
         	.on("brush", brush);
  	});
 
@@ -91,9 +123,9 @@ d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {
       .attr("class", "measure")
       .attr("transform", function(d) { return "translate(" + xScale(d) + ")"; })
       .call(d3.behavior.drag()
-		.origin(function(d) { 
+		.origin(function(colName) { 
 			return {
-	      		x: xScale(d)
+	      		x: xScale(colName)
 	    	}; 
 	    })
 		.on('dragstart', dragstart)
@@ -101,25 +133,25 @@ d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {
 		.on('dragend', dragend)
 		);
   
-  function dragstart(d) {
-	  iDragCol = axisCols.indexOf(d);
+  function dragstart(colName) {
+	  iDragCol = axisCols.indexOf(colName);
   }
   
-  function drag(d) {
+  function drag(colName) {
 	  xScale.range()[iDragCol] = d3.event.x;
 	  axisCols.sort(function(a,b) { 
 		  return xScale(a) - xScale(b);
 		  })
-	    g.attr("transform", function(d) { 
-	    	return "translate(" + xScale(d) + ")"; });
+	    g.attr("transform", function(colName) { 
+	    	return "translate(" + xScale(colName) + ")"; });
 	    dataLinesSelection.attr("d", path);	  
   }
   
-  function dragend(d){
+  function dragend(colName){
 	  xScale.domain(axisCols).rangePoints([margin, width - (margin * 2)]);
 	  var t = d3.transition().duration(500);
-	  t.selectAll(".measure").attr("transform", function(d) {
-		  return 'translate(' + xScale(d) + ')';
+	  t.selectAll(".measure").attr("transform", function(colName) {
+		  return 'translate(' + xScale(colName) + ')';
 	  })
 	  t.selectAll('.dataLines path').attr('d', path);
   }
@@ -127,11 +159,11 @@ d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {
   // draw the axes
   g.append("svg:g")
       .attr("class", "axis")
-      .each(function(d) { 
+      .each(function(colName) { 
     	  d3.select(this).call(
     			  d3.svg.axis().orient("left")
     			  	.scale(
-    				  yScales[d]
+    				  yScales[colName]
     				  )); })
     //draw the axis titles
      .append("svg:text")
@@ -143,8 +175,8 @@ d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {
   // Add a brush for each axis.
   g.append("svg:g")
       .attr("class", "brush")
-      .each(function(d) { d3.select(this).call(
-    		  yScales[d].brush); 
+      .each(function(colName) { d3.select(this).call(
+    		  yScales[colName].brush); 
       })
       .selectAll("rect")
       	.attr("x", -8)
