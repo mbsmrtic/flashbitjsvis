@@ -21,12 +21,17 @@
     <script type="text/javascript">
 
 var colors = {'1983': '#66C2A5', '1989': '#8DA0CB' }
-var axisCols = ['Year', 'KCAL', 'dBMI', 'TOTCHOL', 'NONHDL', 'MEAT', 'EGGS', 'FISH', 'WHTFLOUR', 
-                'FRUIT', 'GREENVEG', 'LEGUME', 'LIGHTVEG', 'OTHCEREAL', 'RICE', 'SALTVEG', 
-                'STCHSUGAR', 'STCHTUBER', 
-                'COLRECCAc', 
-                'BREASTCAc', 'LEUKEMIAb', 'IHDc','DIABETESc'];
+var axisCols = [    //still need to implement drag handling for ordinal axes,so they're out for now
+                //'CountyName', 'Year',   
+                'KCAL', 'dBMI', 'TOTCHOL', 'NONHDL', 
+                'STCHTUBER', 'RICE','WHTFLOUR', 'GREENVEG', 'LIGHTVEG', 'OTHCEREAL',
+                'FRUIT','MILK','SALTVEG', 'FISH',   'MEAT',  'LEGUME',
+                'STCHSUGAR', 'EGGS',
+                //'COLRECCAc', 
+                //'BREASTCAc', 'LEUKEMIAb', 'IHDc','DIABETESc'
+                ];
 var colCategory = {
+		'CountyName':	'countyname',
 		'Year': 	'Year',
 		'KCAL': 	'KCAL',
 		'dBMI': 	'dBMI',
@@ -45,6 +50,8 @@ var colCategory = {
         'SALTVEG':	'food', 
         'STCHSUGAR':'food', 
         'STCHTUBER':'food', 
+        'MILK':		'food',
+        'VEGOIL':	'food',
         'COLRECCAc':'mort', 
         'BREASTCAc':'mort', 
         'LEUKEMIAb':'mort', 
@@ -81,23 +88,48 @@ d3.csv("../data/chFoodWeightMort.csv", function(dataIn) {
 	});
   	// Create a scale and brush for each measure.
  	axisCols.forEach(function(colName) {
-    	// Coerce values to numbers.
-    	dataIn.forEach(function(p, i) { 
-   			countyData[i][colName] = +p[colName]; 
-    	});
+ 		if (colCategory[colName] != 'Year') {
+	    	// Coerce values to numbers.
+	    	dataIn.forEach(function(p, i) { 
+	    		if (! isNaN(p[colName])) {
+	   				countyData[i][colName] = +p[colName];
+	    		}
+	    	});
+ 		}
 
     	colExtent = d3.extent(countyData, function(p) {
     		return p[colName];
     	});
-    	if (colCategory[colName] == 'food')
+    	category = colCategory[colName];
+    	if (category == 'food')
     		colExtent = [0, 1100];
-    	else if (colCategory[colName] == 'mort') {
+    	else if (category == 'mort') {
 			colExtent = [0, 200];
 		}
-    	yScales[colName] = d3.scale.linear()
-        	.domain(colExtent)
-        	.range([height, 0]);
-
+    	
+    	//handle ordinal values
+    	if ((category == 'countyname') || (category == 'Year')) {
+    		domValueSet = {};
+    		countyData.forEach(function(record) {
+    			domValueSet[record[colName]] = 1;
+    		});
+        	domValues = Object.keys(domValueSet);  
+        	domValues.sort();
+        	countValues = domValues.length;
+        	rangeValues = domValues.map(function(d, i) {
+        		return height/countValues * i;
+        	});
+    		yScales[colName] = d3.scale.ordinal()
+    			.domain(domValues)
+    			.range(rangeValues);
+    	}
+    	//linear values
+    	else {
+    		yScales[colName] = d3.scale.linear()
+        		.domain(colExtent)
+        		.range([height, 0]);
+    	}
+    	
     	yScales[colName].brush = d3.svg.brush()
         	.y(yScales[colName])
         	.on("brush", brush);
